@@ -1,0 +1,184 @@
+---
+title: "Stat448 Presentation Code"
+author: "Lida Tetyusheva"
+date: "2023-02-23"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+subtitle: Urbana Crime Dataset
+---
+
+## Project Summary
+
+Using the Urbana Crime Dataset, I am analyzing how crime on Green Street compares to crime in all of Urbana as well as looking for patterns in crime on Green Street.
+
+## Install/Load Packages
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+```
+
+## Import Dataset and Combine
+
+### Urbana Crime Dataset Part 1 and Part 6
+
+```{r}
+urbana_part01 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part01.csv", show_col_types = FALSE)
+
+urbana_part06 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part06.csv",show_col_types = FALSE)
+
+urbana = urbana_part01 %>%
+  rbind(urbana_part06) %>%
+  filter(`YEAR OCCURRED` >= 2013) %>%
+  filter_at(vars(`MAPPING ADDRESS`),all_vars(!is.na(.))) %>%
+  select(-c(INCIDENT,`DATE REPORTED`,`TIME REPORTED`,`DATE ARRIVED`,`TIME ARRIVED`,STREET,`CROSS STREET`,`CRIME CODE`,`CRIME CATEGORY`,`BIAS CODE`,`PLACE CODE`,`STATUS DESCRIPTION`,`BIAS DESCRIPTION`,`STATUS CODE`, COUNTER,`WEAPONS CODE 2`,`WEAPON 2 DESCRIPTION`,`WEAPONS CODE 3`,`WEAPON 3 DESCRIPTION`,`CSA DESCRIPTION`,`GEO CODE`,`HOUSE NUMBER BLOCK`))%>%
+  mutate(`AREA` = case_when(
+    `PLACE CODE DESCRIPTION` %in% c("APARTMENT","RESIDENCE-PRIVATE","RESIDENCE-PORCH","DRIVEWAY-RESIDENTIAL","RESIDENCE-YARD") ~ 'Private',
+    !(`PLACE CODE DESCRIPTION` %in% c("APARTMENT","RESIDENCE-PRIVATE","RESIDENCE-PORCH","DRIVEWAY-RESIDENTIAL","RESIDENCE-YARD")) ~ 'Public')) 
+```
+
+"urbana" Data Description:
+
+| Columns | Rows    | Years     |
+|---------|---------|-----------|
+| 11      | 113,981 | 2013-2022 |
+
+### Separate between Green Street and Urbana Area
+
+```{r}
+green = urbana %>% 
+  filter(grepl(' GREEN ',`MAPPING ADDRESS`)) %>%
+  filter(!grepl("PRAIRIE",`MAPPING ADDRESS`)) %>%
+  mutate(`HUB` = 'Green')
+
+urban = urbana[!(urbana$`MAPPING ADDRESS` %in% green$`MAPPING ADDRESS`),] %>%
+  mutate(HUB = 'Urbana')
+
+```
+
+"green" Data Description
+
+| Columns | Rows    | Years     |
+|---------|---------|-----------|
+| 12      | 1,845   | 2013-2022 |
+
+"urban" Data Description
+
+| Columns | Rows    | Years     |
+|---------|---------|-----------|
+| 12      | 112,136 | 2013-2022 |
+
+## Top Weapons Used in Crimes Involving Weapons 
+
+#### Green Street
+
+```{r}
+
+count = green %>% count(`WEAPON 1 DESCRIPTION`) %>%
+  mutate(percentage = n/sum(n)) %>%
+  arrange(desc(percentage)) %>% 
+  filter(!row_number() %in% c(1)) %>%
+  head(n = 10)
+
+count %>% 
+  filter(!row_number() %in% c(10)) %>%
+  ggplot(aes(x=`WEAPON 1 DESCRIPTION`, y= percentage)) + 
+  geom_bar(stat = "identity", color = 'goldenrod2', fill = 'gold')+
+  ggtitle("Green Street") +
+  coord_flip()
+
+```
+
+#### Urbana 
+
+```{r}
+count2 = urban %>% count(`WEAPON 1 DESCRIPTION`) %>%
+  mutate(percentage = n/sum(n)) %>% 
+  arrange(desc(percentage)) %>% 
+  filter(!row_number() %in% c(1)) %>%
+  head(n = 10)
+
+count2 %>% 
+  filter(!row_number() %in% c(25)) %>%
+  ggplot(aes(x=`WEAPON 1 DESCRIPTION`, y= percentage)) + 
+  geom_bar(stat = "identity", color = 'goldenrod2', fill = 'gold')+
+  ggtitle("Urbana")+
+  coord_flip()
+
+```
+
+Observations:
+- NONE, PERSONAL WEAPONS, and HANDGUN seem to be the most common weapons used when 
+a crime involves a weapon
+- unknown what NONE description is referring to, but for the sake of this dataset, 
+we will keep it in the analysis.
+- percentage of weapons used in crime seems higher in Green Street
+
+## Testing Significance for Difference in Percentage of Weapon Use
+#### Using Two Proportions Z-test at 95% confidence
+
+```{r}
+
+prop.test(x = c(sum(count$n),sum(count2$n)), n = c(nrow(green),nrow(urban)), alternative = 'two.sided',correct = TRUE)$p.value
+
+prop.test(x = c(sum(count$n),sum(count2$n)), n = c(nrow(green), nrow(urban)), alternative = 'greater')$p.value
+
+```
+
+Conclusion: 
+At $\alpha$ = .05, the percentage of crimes involving weapons on Green Street is **significantly different** and **significantly greater** than that of Urbana.
+
+## Time of Crime vs. Number of Crimes
+### Green Street
+```{r}
+green %>%
+  mutate(`TIME OCCURRED` = hour(hms(green$`TIME OCCURRED`))) %>%
+  group_by(`HUB`)%>%
+  count(`TIME OCCURRED`)%>%
+  ggplot(aes(x= `TIME OCCURRED`, y= n)) +
+  ggtitle("Hour vs Crime Frequency on Green Street") +
+  geom_line(color = 'blue', size = 1) 
+```
+
+#### Urbana
+```{r}
+urban %>%
+  mutate(`TIME OCCURRED` = hour(hms(urban$`TIME OCCURRED`))) %>%
+  filter(`TIME OCCURRED` <= 23) %>%
+  group_by(`HUB`)%>%
+  count(`TIME OCCURRED`)%>%
+  ggplot(aes(x= `TIME OCCURRED`, y= n)) +
+  ggtitle("Hour vs Crime Frequency in Urbana") +
+  geom_line(color = 'orange', size = 1) 
+```
+Observations:
+The time a crime occurs seems to peak around 4 o'clock on Green Street and around 12 o'clock in Urbana. If most crimes on Green Street are being committed by campus residents and students, I would guess the peak is at 4 because that's when students tend to end their school day. 
+
+## Number of Crimes vs. the Month
+#### Green Street
+```{r}
+green %>%
+  count(`MONTH OCCURRED`)%>%
+  ggplot(aes(x = `MONTH OCCURRED`, y = n, fill = `MONTH OCCURRED`)) +
+  ggtitle("Green Street Crime Per Month") +
+  geom_bar(stat = 'identity' )+
+  theme(legend.position="none")
+```
+#### Urbana
+```{r}
+urban%>%
+  count(`MONTH OCCURRED`)%>%
+  ggplot(aes(x = `MONTH OCCURRED`, y = n, fill = `MONTH OCCURRED`)) +
+  ggtitle("Urbana Crime Per Month") +
+  geom_bar(stat = 'identity' )+
+  theme(legend.position="none")
+```
+
+Observations:
+Urbana appears to have a smooth slope that peaks in August, whereas Green Street seems to have two peaks in April and October. I wonder if in the Green Street data there is a significant relationship between time periods in the year and mean number of crime that relates to the school year. 
+
+

@@ -1,0 +1,93 @@
+---
+---
+---
+
+# Analysis of Crime In Urbana, IL During the Holidays
+
+## Using the Urbana Policing Dataset and R
+
+#### Loaded Packages
+
+```{r}
+#| warning: false
+#| message: false
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+```
+
+#### Downloaded Datasets:
+
+```{r}
+#| warning: false
+#| message: false
+urbana_part01 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part01.csv")
+urbana_part02 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part02.csv")
+urbana_part03 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part03.csv")
+urbana_part04 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part04.csv")
+urbana_part05 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part05.csv")
+urbana_part06 <- read_csv("C:/Users/Ivan/Desktop/Stat448Prezi/data_urbana_policing-main/urbana-police-incidents-data-part06.csv")
+```
+
+### Combining and Cleaning Data:
+
+```{r}
+urbana = rbind(urbana_part01,urbana_part02,urbana_part03,
+               urbana_part04,urbana_part05,urbana_part06) %>%
+  filter_at(vars(`MAPPING ADDRESS`),all_vars(!is.na(.))) %>%
+  filter(`YEAR OCCURRED` > 1957) %>%
+  distinct(INCIDENT, .keep_all = TRUE) %>%
+  select(-c(INCIDENT,`DATE REPORTED`,`TIME REPORTED`,`DATE ARRIVED`,`TIME ARRIVED`,
+            STREET,`CROSS STREET`,`CRIME CODE`,`CRIME CATEGORY`,`BIAS CODE`,
+            `PLACE CODE`,`STATUS DESCRIPTION`,`BIAS DESCRIPTION`, 
+            `CRIME DESCRIPTION`,`STATUS CODE`,`WEAPONS CODE 2`,
+            `WEAPON 2 DESCRIPTION`, `WEAPONS CODE 3`,`WEAPON 3 DESCRIPTION`,
+            `CSA DESCRIPTION`,`GEO CODE`,`HOUSE NUMBER BLOCK`,COUNTER)) %>%
+  mutate(`AREA` = case_when(
+    `PLACE CODE DESCRIPTION` %in% c("APARTMENT","RESIDENCE-PRIVATE","RESIDENCE-PORCH","DRIVEWAY-RESIDENTIAL","RESIDENCE-YARD") ~ 'Private',
+    !(`PLACE CODE DESCRIPTION` %in% c("APARTMENT","RESIDENCE-PRIVATE","RESIDENCE-PORCH","DRIVEWAY-RESIDENTIAL","RESIDENCE-YARD")) ~ 'Public'
+  )) 
+
+print(data.frame(
+  Rows = nrow(urbana),
+  Columns = ncol(urbana)), row.names = F)
+```
+
+### Specifying Holidays:
+
+I used statistics found at [Alcohol.org](https://alcohol.org/statistics-information/holiday-binge-drinking/) about binge drinking to inform my decision on which holidays to focus on in my analysis. What I found is that the holiday season plays a big factor in how much the average person drinks alcohol. Thanksgiving, Christmas, and New Years were described as the holidays involving the most binge drinking. Other holidays such as St. Patrick's Day, Cinco de Mayo, Fourth of July, and Halloween were described as promoting dangerous drinking habits. The following table shows how I assigned these holidays under the new variable `EVENT` for a new data set named `holiday` .
+
+| Holiday                  | Date(s)     |
+|:-------------------------|:------------|
+| Christmas and New Year's | 12/24 - 1/1 |
+| St. Patrick's Day        | 3/17        |
+| Cinco de Mayo            | 5/5         |
+| Fourth of July           | 7/4-7/5     |
+| Halloween                | 10/31-11/1  |
+| Thanksgiving             | 11/22-11/28 |
+
+```{r}
+holiday = urbana %>%
+  mutate(`DATE OCCURRED` = format(ymd(as.Date(`DATE OCCURRED`,"%m/%d/%Y")),"%m/%d"), EVENT = case_when(
+    `DATE OCCURRED`  %in% c("12/24","12/25","12/26","12/27","12/28","12/29","12/30","12/31","01/01") ~ "Christmas/NewYears",
+    `DATE OCCURRED` == "03/17" ~ "St.Patricks",
+    `DATE OCCURRED` == "07/04"|`DATE OCCURRED` == "07/05" ~ "July4th",
+    `DATE OCCURRED` == "10/31"|`DATE OCCURRED` == "11/01" ~ "Halloween",
+    `DATE OCCURRED` == "05/05" ~ "CincoDeMayo",
+    `DATE OCCURRED` >= "11/22" & `DATE OCCURRED` <= "11/28" ~ "ThanksgivingWeek"
+  ))%>%
+  filter(!is.na(EVENT))
+```
+
+### Frequency of Urbana Crime during Holidays
+
+```{r}
+holiday %>%
+  group_by(EVENT)%>%
+  summarise(count = n()/length(unique(`DATE OCCURRED`)))%>%
+  ggplot(aes(x=`EVENT`, y= count)) + 
+  geom_bar(stat = "identity", color = 'gold', fill = 'goldenrod2')+
+  ggtitle("Number of Crimes during Holidays")
+```

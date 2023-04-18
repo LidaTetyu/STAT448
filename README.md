@@ -4,7 +4,6 @@ My code and presentations for my Advanced Data Analysis Class
 ## First Analysis
 Analysis on Urbana Policing Dataset, focusing on crime occurring on Green Street. 
 - GreenStreetCrime.pptx
-- prezicode.R
 - prezicode.Rmd
 
 ## Second Analysis

@@ -1,12 +1,10 @@
-# STAT448
-My code and presentations for my Advanced Data Analysis Class
+# Undergraduate-Projects
+My code and presentations for my classes I took while pursuing my undergraduate degree in statistics at University of Illinois at Urbana/Champaign
 
-## First Analysis
+## Stat448-Advanced Data Analytics
 Analysis on Urbana Policing Dataset, focusing on crime occurring on Green Street. 
 - GreenStreetCrime.pptx
 - prezicode.Rmd
-
-## Second Analysis
 Second analysis on Urbana Policing Dataset with the goal of seeing how holidays involving the most drinking affect crime in Urbana
 - UrbanaHolidayCrime.pptx
 - prezicode2.R

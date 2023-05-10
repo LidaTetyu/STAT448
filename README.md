@@ -13,4 +13,4 @@ Second analysis on Urbana Policing Dataset with the goal of seeing how holidays 
 
 ## Stat440 - Statistical Data Management
 Shiny application "Illinois University Finder" for final project 
-- app.R (can also be found at: [insert link here])
+- app.R (can also be found at: https://lidabug123.shinyapps.io/stat440final/)

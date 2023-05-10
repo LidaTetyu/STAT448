@@ -10,3 +10,7 @@ Second analysis on Urbana Policing Dataset with the goal of seeing how holidays 
 - UrbanaHolidayCrime.pptx
 - prezicode2.R
 - UrbanaHolidayCrime.Rmd (work in progress)
+
+## Stat440 - Statistical Data Management
+Shiny application "Illinois University Finder" for final project 
+- app.R
